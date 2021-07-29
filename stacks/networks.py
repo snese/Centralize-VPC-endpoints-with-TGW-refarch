@@ -4,12 +4,12 @@ import aws_cdk.aws_ec2 as ec2
 
 class Network(core.Stack):
 
-    def __init__(self, scope: core.Construct, id: str, cidr_range: str, **kwargs) -> None:
+    def __init__(self, scope: core.Construct, id: str, cidr_range: str, tgw_stack: core.Stack, **kwargs) -> None:
         super().__init__(scope, id, **kwargs)
 
-       # VPC Creation
+        # VPC Creation
         self.vpc = ec2.Vpc(self,
-            "vpc",
+            id=f"{kwargs['env']['region']}-vpc",
             max_azs=1,
             cidr=cidr_range,
             # configuration will create 1 subnet in a single AZ.
@@ -21,33 +21,22 @@ class Network(core.Stack):
             ]
         )
 
-        # VPC Endpoint creation for SSM (3 Endpoints needed)
-        ec2.InterfaceVpcEndpoint(
+        # Transit Gateway attachment to the VPC
+        self.tgw_attachment = ec2.CfnTransitGatewayAttachment(
             self,
-            "VPCe - SSM",
-            service=ec2.InterfaceVpcEndpointService(
-                core.Fn.sub("com.amazonaws.${AWS::Region}.ssm")
-            ),
-            private_dns_enabled=True,
-            vpc=self.vpc,
+            id=f"tgw-vpc-{kwargs['env']['region']}",
+            transit_gateway_id=tgw_stack.tgw.ref,
+            vpc_id=self.vpc.vpc_id,
+            subnet_ids=[subnet.subnet_id for subnet in self.vpc.isolated_subnets],
+            tags=[core.CfnTag(key='Name', value=f"tgw-{self.vpc.vpc_id}-attachment")]
         )
 
-        ec2.InterfaceVpcEndpoint(
-            self,
-            "VPCe - EC2 Messages",
-            service=ec2.InterfaceVpcEndpointService(
-                core.Fn.sub("com.amazonaws.${AWS::Region}.ec2messages")
-            ),
-            private_dns_enabled=True,
-            vpc=self.vpc,
-        )
-
-        ec2.InterfaceVpcEndpoint(
-            self,
-            "VPCe - SSM Messages",
-            service=ec2.InterfaceVpcEndpointService(
-                core.Fn.sub("com.amazonaws.${AWS::Region}.ssmmessages")
-            ),
-            private_dns_enabled=True,
-            vpc=self.vpc,
-        )
+        # Set the default route on the subnets to the TGW
+        for subnet in self.vpc.isolated_subnets:
+            ec2.CfnRoute(
+                self,
+                id='vpc_route_all_tgw',
+                route_table_id=subnet.route_table.route_table_id,
+                destination_cidr_block='0.0.0.0/0',
+                transit_gateway_id=tgw_stack.tgw.ref
+            )

@@ -9,25 +9,56 @@ from aws_cdk import core as cdk
 from aws_cdk import core
 from stacks.networks import Network
 from stacks.ec2 import Ec2
+from stacks.tgw import Tgw, TgwAttachmentAndRoute
+from stacks.vpce import Vpce
 
 app = core.App()
 
-# us-east-1
-# netowrk
-network_stack_us_east_1 = Network(app, "network-us-east-1",
+# ap-southeast-1
+
+## INIT
+# env=core.Environment(
+#     account=os.environ.get("CDK_DEPLOY_ACCOUNT", os.environ["CDK_DEFAULT_ACCOUNT"]),
+#     region=os.environ.get("CDK_DEPLOY_REGION", os.environ["CDK_DEFAULT_REGION"])
+# )
+
+env={
+    'region': 'ap-southeast-1',
+    }
+
+## TGW
+tgw_stack = Tgw(app, "tgw-stack",
+        tgw_asn=64513,
+        env=env
+    )
+
+## VPC & Attachment & Route
+
+### VPC0 Shared
+network_stack_0_shared = Network(app, "network-stack-0-shared",
         cidr_range="172.16.0.0/16",
-        env=core.Environment(
-            region="us-east-1")
+        tgw_stack=tgw_stack,
+        env=env
     )
 
-# ec2
-ec2_stack_us_east_1 = Ec2(app, id="instance-us-east-1",
-        network_stack=network_stack_us_east_1, 
-        env=core.Environment(
-            region="us-east-1")
+### VPC1 Spoke
+network_stack_1_spoke = Network(app, "network-stack-1-spoke",
+        cidr_range="172.16.1.0/16",
+        tgw_stack=tgw_stack,
+        env=env
     )
 
+### VPC2 Spoke
+network_stack_2_spoke = Network(app, "network-stack-2-spoke",
+        cidr_range="172.16.2.0/16",
+        tgw_stack=tgw_stack,
+        env=env
+    )
 
-ec2_stack_us_east_1.add_dependency(network_stack_us_east_1)
+## TODO VPCe 
+
+## TODO Route53
+
+## TODO Instances
 
 app.synth()

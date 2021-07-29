@@ -29,19 +29,16 @@ class Ec2(core.Stack):
             ec2.Port.all_icmp()
         )
 
-        # Auto-scaling group
-        asg = autoscaling.AutoScalingGroup(self, "ASG", 
-            vpc=network_stack.vpc,
+        # Create Instance
+        ec2.Instance(self, 'Instance',
             role=ec2_instance_role,
+            vpc=network_stack.vpc,
             instance_type=ec2.InstanceType.of(
-                instance_class=ec2.InstanceClass.BURSTABLE2,
-                instance_size=ec2.InstanceSize.MICRO,
+                instance_class=ec2.InstanceClass.BURSTABLE3_AMD,
+                instance_size=ec2.InstanceSize.SMALL,
             ),
             machine_image=ec2.AmazonLinuxImage(
               generation=ec2.AmazonLinuxGeneration.AMAZON_LINUX_2,
             ),
-            desired_capacity=1500,
-            max_capacity=2000,
-            min_capacity=1000)
-
-        asg.add_security_group(ec2_sg)
+            security_group=ec2_sg
+        )
