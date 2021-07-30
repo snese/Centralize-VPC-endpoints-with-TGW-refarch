@@ -54,7 +54,6 @@ network_stack_2_spoke = Network(app, "network-stack-2-spoke",
 
 ## TODO 
 # [] Route53 Associate
-# [] Instances
 
 ## Instance
 ec2_stack_0_shared = Ec2(app, id="instance-stack-0-shared",

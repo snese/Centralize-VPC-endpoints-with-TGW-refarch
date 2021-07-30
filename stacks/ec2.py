@@ -11,7 +11,10 @@ class Ec2(core.Stack):
         # Create ServiceRole for EC2 instances; enable SSM usage
         ec2_instance_role = iam.Role(self, "Role",
             assumed_by=iam.ServicePrincipal("ec2.amazonaws.com"),
-            managed_policies=[iam.ManagedPolicy.from_aws_managed_policy_name("AmazonSSMManagedInstanceCore")],
+            managed_policies=[
+                iam.ManagedPolicy.from_aws_managed_policy_name("AmazonSSMManagedInstanceCore"),
+                iam.ManagedPolicy.from_aws_managed_policy_name("AmazonSQSFullAccess")
+                ],
             description="This is a custom role for assuming the SSM role"
         )
 
