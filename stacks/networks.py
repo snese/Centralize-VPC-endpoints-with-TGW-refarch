@@ -4,7 +4,7 @@ import aws_cdk.aws_ec2 as ec2
 
 class Network(core.Stack):
 
-    def __init__(self, scope: core.Construct, id: str, cidr_range: str, tgw_stack: core.Stack, **kwargs) -> None:
+    def __init__(self, scope: core.Construct, id: str, cidr_range: str, tgw_stack: core.Stack, has_endpoints: bool, **kwargs) -> None:
         super().__init__(scope, id, **kwargs)
 
         # VPC Creation
@@ -16,7 +16,7 @@ class Network(core.Stack):
             subnet_configuration=[ec2.SubnetConfiguration(
                     subnet_type=ec2.SubnetType.ISOLATED,
                     name="Isolated",
-                    cidr_mask=20
+                    cidr_mask=25
                     )
             ]
         )
@@ -31,12 +31,26 @@ class Network(core.Stack):
             tags=[core.CfnTag(key='Name', value=f"tgw-{self.vpc.vpc_id}-attachment")]
         )
 
-        # Set the default route on the subnets to the TGW
-        for subnet in self.vpc.isolated_subnets:
-            ec2.CfnRoute(
-                self,
-                id='vpc_route_all_tgw',
-                route_table_id=subnet.route_table.route_table_id,
-                destination_cidr_block='0.0.0.0/0',
-                transit_gateway_id=tgw_stack.tgw.ref
-            )
+        if has_endpoints:
+            services = ["ssm", "ssmmessages", "ec2messages", "sqs"]
+            for service in services:
+                ec2.InterfaceVpcEndpoint(
+                    self,
+                    "VPCe - " + service,
+                    service=ec2.InterfaceVpcEndpointService(
+                        core.Fn.sub("com.amazonaws.${AWS::Region}." + service)
+                    ),
+                    private_dns_enabled=False,
+                    vpc=self.vpc,
+                )
+
+
+        # # Set the default route on the subnets to the TGW
+        # for subnet in self.vpc.isolated_subnets:
+        #     ec2.CfnRoute(
+        #         self,
+        #         id='vpc_route_all_tgw',
+        #         route_table_id=subnet.route_table.route_table_id,
+        #         destination_cidr_block='0.0.0.0/0',
+        #         transit_gateway_id=tgw_stack.tgw.ref
+        #     )
