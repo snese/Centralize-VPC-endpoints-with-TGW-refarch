@@ -1,7 +1,6 @@
 from aws_cdk import (core,
     aws_ec2 as ec2,
     aws_iam as iam,
-    aws_autoscaling as autoscaling,
 )
 
 class Ec2(core.Stack):
@@ -38,7 +37,7 @@ class Ec2(core.Stack):
                 instance_size=ec2.InstanceSize.SMALL,
             ),
             machine_image=ec2.AmazonLinuxImage(
-              generation=ec2.AmazonLinuxGeneration.AMAZON_LINUX_2,
+                generation=ec2.AmazonLinuxGeneration.AMAZON_LINUX_2,
             ),
             security_group=ec2_sg
         )
