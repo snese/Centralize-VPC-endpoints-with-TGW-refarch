@@ -2,6 +2,8 @@ from aws_cdk import core
 import aws_cdk.aws_ec2 as ec2
 import aws_cdk.aws_route53 as r53
 import aws_cdk.aws_route53_targets as target
+import aws_cdk.aws_logs as logs
+import aws_cdk.aws_iam as iam
 
 
 class Network(core.Stack):
@@ -65,4 +67,25 @@ class Network(core.Stack):
                     zone=private_host_zone,
                     target=r53.RecordTarget.from_alias(target.InterfaceVpcEndpointTarget(endpoint))
                 )
+
+        # VPC Flow Log
+        vpc_flow_log_role=iam.Role(self, "vpc-flow-log-role",
+            assumed_by=iam.ServicePrincipal("vpc-flow-logs.amazonaws.com")
+        )
+
+        log_group=logs.LogGroup(self, "vpc-flow-log-group",
+            log_group_name=id,
+            retention=logs.RetentionDays("ONE_YEAR"),
+            removal_policy=core.RemovalPolicy("DESTROY")
+        )
+
+        vpc_flow_log=ec2.CfnFlowLog(self, "vpc-flow-log",
+            resource_id=self.vpc.vpc_id,
+            resource_type="VPC",
+            traffic_type="ALL",
+            deliver_logs_permission_arn=vpc_flow_log_role.role_arn,
+            log_group_name=log_group.log_group_name
+        )
+
+
 
