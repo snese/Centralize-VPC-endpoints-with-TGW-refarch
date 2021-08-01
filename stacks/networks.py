@@ -70,11 +70,14 @@ class Network(core.Stack):
 
         # VPC Flow Log
         vpc_flow_log_role=iam.Role(self, "vpc-flow-log-role",
-            assumed_by=iam.ServicePrincipal("vpc-flow-logs.amazonaws.com")
+            assumed_by=iam.ServicePrincipal("vpc-flow-logs.amazonaws.com"),
+            managed_policies=[
+                iam.ManagedPolicy.from_aws_managed_policy_name("CloudWatchLogsFullAccess")
+            ]
         )
 
         log_group=logs.LogGroup(self, "vpc-flow-log-group",
-            log_group_name=id,
+            log_group_name=f"/aws/vpc-flow-log/{id}",
             retention=logs.RetentionDays("ONE_YEAR"),
             removal_policy=core.RemovalPolicy("DESTROY")
         )
